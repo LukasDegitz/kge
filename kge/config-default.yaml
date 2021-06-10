@@ -202,6 +202,9 @@ train:
   #              scores (e.g., TransE, RotatE).
   loss_arg: .nan
 
+  # weight applied to the loss
+  loss_weight: 1
+
   # Maximum number of epochs used for training
   max_epochs: 20
 
@@ -399,6 +402,17 @@ negative_sampling:
   # 'triple' (e.g., for TransE or RotatE in the current implementation). 'auto'
   # tries to do just this heuristically.
   implementation: auto
+
+# Options for compound training job
+compound:
+  class_name: TrainingJobCompound
+  # names of each base trainer and training settings
+  # each training setting defined for a base trainer is used only for itself
+  # all other training settings taken from general training settings
+  trainers:
+    +++: +++
+  # whether to normalize the base trainer weights or not
+  normalize_weights: False
 
 ## VALIDATION AND EVALUATION ###################################################
 

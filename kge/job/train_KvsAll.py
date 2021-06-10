@@ -217,7 +217,7 @@ class TrainingJobKvsAll(TrainingJob):
         batch_index,
         batch,
         subbatch_slice,
-        result: TrainingJob._ProcessBatchResult,
+        result: TrainingJob._ProcessBatchResult
     ):
         batch_size = result.size
 
@@ -284,7 +284,7 @@ class TrainingJobKvsAll(TrainingJob):
                         queries_subbatch[examples, 0], queries_subbatch[examples, 1]
                     )
                 # note: average on batch_size, not on subbatch_size
-                loss_value = (
+                loss_value = self._loss_weight * (
                     self.loss(scores, labels_for_query_type[query_type]) / batch_size
                 )
                 result.avg_loss += loss_value.item()

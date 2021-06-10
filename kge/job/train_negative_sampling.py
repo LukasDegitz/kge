@@ -105,7 +105,7 @@ class TrainingJobNegativeSampling(TrainingJob):
         batch_index,
         batch,
         subbatch_slice,
-        result: TrainingJob._ProcessBatchResult,
+        result: TrainingJob._ProcessBatchResult
     ):
         batch_size = result.size
 
@@ -151,7 +151,7 @@ class TrainingJobNegativeSampling(TrainingJob):
 
             # compute loss for slot in subbatch (concluding the forward pass)
             result.forward_time -= time.time()
-            loss_value_torch = (
+            loss_value_torch = self._loss_weight * (
                 self.loss(scores, labels[slot], num_negatives=num_samples) / batch_size
             )
             result.avg_loss += loss_value_torch.item()
