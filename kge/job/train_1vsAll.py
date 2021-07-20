@@ -50,7 +50,7 @@ class TrainingJob1vsAll(TrainingJob):
         batch_index,
         batch,
         subbatch_slice,
-        result: TrainingJob._ProcessBatchResult,
+        result: TrainingJob._ProcessBatchResult
     ):
         batch_size = result.size
 
@@ -62,7 +62,9 @@ class TrainingJob1vsAll(TrainingJob):
         # forward/backward pass (sp)
         result.forward_time -= time.time()
         scores_sp = self.model.score_sp(triples[:, 0], triples[:, 1])
-        loss_value_sp = self.loss(scores_sp, triples[:, 2]) / batch_size
+        loss_value_sp = self._loss_weight * (
+                self.loss(scores_sp, triples[:, 2]) / batch_size
+        )
         result.avg_loss += loss_value_sp.item()
         result.forward_time += time.time()
         result.backward_time = -time.time()
@@ -73,7 +75,9 @@ class TrainingJob1vsAll(TrainingJob):
         # forward/backward pass (po)
         result.forward_time -= time.time()
         scores_po = self.model.score_po(triples[:, 1], triples[:, 2])
-        loss_value_po = self.loss(scores_po, triples[:, 0]) / batch_size
+        loss_value_po = self._loss_weight * (
+                self.loss(scores_po, triples[:, 0]) / batch_size
+        )
         result.avg_loss += loss_value_po.item()
         result.forward_time += time.time()
         result.backward_time -= time.time()

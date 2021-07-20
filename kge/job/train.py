@@ -72,6 +72,7 @@ class TrainingJob(TrainingOrEvaluationJob):
         else:
             self.model: KgeModel = model
         self.loss = KgeLoss.create(config)
+        self._loss_weight = config.get("train.loss_weight")
         self.abort_on_nan: bool = config.get("train.abort_on_nan")
         self.batch_size: int = config.get("train.batch_size")
         self._subbatch_auto_tune: bool = config.get("train.subbatch_auto_tune")
@@ -603,7 +604,12 @@ class TrainingJob(TrainingOrEvaluationJob):
             # determine data used for this subbatch
             subbatch_end = min(subbatch_start + max_subbatch_size, batch_size)
             subbatch_slice = slice(subbatch_start, subbatch_end)
-            self._process_subbatch(batch_index, batch, subbatch_slice, result)
+            self._process_subbatch(
+                batch_index,
+                batch,
+                subbatch_slice,
+                result
+            )
 
         return result
 

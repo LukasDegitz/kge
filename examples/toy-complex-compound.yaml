@@ -1,0 +1,30 @@
+dataset:
+  name: fb15k-237
+model: complex
+import:
+- complex
+train:
+  auto_correct: true
+  batch_size: 512
+  loss: bce
+  loss_arg: 1.0
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_args:
+    factor: 0.95
+    mode: max
+    patience: 7
+    threshold: 0.0001
+  max_epochs: 400
+  optimizer:
+    default:
+      args:
+        lr: 0.5033757903456219
+  type: compound
+compound:
+  trainers:
+    NegSamp:
+      type: negative_sampling
+      loss_weight: 2
+    KvsAll:
+      type: KvsAll
+      loss_weight: 1
