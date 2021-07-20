@@ -111,7 +111,6 @@ class TrainingJob(TrainingOrEvaluationJob):
         # Hooks run after validation. The corresponding valid trace entry can be found
         # in self.valid_trace[-1] Signature: job
         self.post_valid_hooks: List[Callable[[Job], Any]] = []
-
         if self.__class__ == TrainingJob:
             for f in Job.job_created_hooks:
                 f(self)
