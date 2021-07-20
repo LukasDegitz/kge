@@ -15,3 +15,5 @@ from kge.job.search_grid import GridSearchJob
 from kge.job.search_manual import ManualSearchJob
 from kge.job.search_auto import AutoSearchJob
 from kge.job.search_ax import AxSearchJob
+from kge.job.train_types_logistic import TrainingJobTypesLogisitic
+from kge.job.eval_types_logistic import TypesLogisticEvaluationJob

@@ -414,6 +414,9 @@ compound:
   # whether to normalize the base trainer weights or not
   normalize_weights: False
 
+TypesLogistic:
+  class_name: TrainingJobTypesLogisitic
+
 ## VALIDATION AND EVALUATION ###################################################
 
 # Options used for all evaluation jobs (job.type=="eval"). Also used during
@@ -456,7 +459,7 @@ valid:
   # Name of the trace entry that holds the validation metric (higher value is
   # better). To add a custom metric, set this to a fresh name and define
   # metric_expr below.
-  metric: mean_reciprocal_rank_filtered_with_test
+  metric: avg_loss
 
   # If the above metric is not present in trace (e.g., because a custom metric
   # should be used), a Python expression to compute the metric. Can refer to
@@ -544,6 +547,8 @@ entity_ranking:
 training_loss:
   class_name: TrainingLossEvaluationJob
 
+types_logistic:
+  class_name: TypesLogisticEvaluationJob
 ## EVALUATION ##################################################################
 
 
@@ -627,4 +632,5 @@ ax_search:
 # These parameters are not used by the kge framework itself. It can be used to
 # add additional configuration options or information to this config.
 user:
+  types_path: data/
   +++: +++

@@ -633,6 +633,31 @@ class KgeModel(KgeBase):
                     indexes=triples[:, O], **kwargs
                 )
             return penalty_result
+        elif "batch" in kwargs and "types" in kwargs["batch"]:
+            # essentially equal to the above, except for
+            # 1) Type training does not alter Predicates so no penalty
+            # 2) Type training does not alter Objects so no penalty
+            # 2) Different Entity index representation
+            # 3) Atm. no weighting since entity ids are unique across batches
+            entity_indexes = kwargs["batch"]["idx"].to(self.config.get("job.device"))
+            penalty_result = super().penalty(**kwargs)
+
+            if self.get_s_embedder() is self.get_o_embedder():
+                entity_penalty_result = self.get_s_embedder().penalty(
+                    indexes=entity_indexes, **kwargs,
+                )
+                for penalty in entity_penalty_result:
+                    for p in penalty:
+                        p *= 2
+                penalty_result += entity_penalty_result
+            else:
+                penalty_result += self.get_s_embedder().penalty(
+                    indexes=entity_indexes, **kwargs
+                )
+                penalty_result += self.get_o_embedder().penalty(
+                    indexes=entity_indexes, **kwargs
+                )
+            return penalty_result
         else:
             penalty_result = super().penalty(**kwargs) + self.get_p_embedder().penalty(
                 **kwargs
