@@ -3,9 +3,9 @@ dataset.name: toy
 
 train:
   optimizer.default:
-    type: Adagrad
+    type: Adam
     args:
-      lr: 0.2
+      lr: 0.002
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_args:
     mode: max

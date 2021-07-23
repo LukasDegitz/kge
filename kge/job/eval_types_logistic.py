@@ -1,12 +1,14 @@
 import torch
 import time
 import math
+import numpy as np
 
 from kge import Config, Dataset
 from kge.job import Job, EvaluationJob
 from kge.job.util import load_types
 
 from typing import Any, Dict
+from sklearn.metrics import f1_score
 
 
 class TypesLogisticEvaluationJob(EvaluationJob):
@@ -26,6 +28,7 @@ class TypesLogisticEvaluationJob(EvaluationJob):
                                             dataset=self.dataset,
                                             parent_job=self,
                                             model=self.model)
+        self.threshold = torch.Tensor([0.5])
 
         if self.__class__ == TypesLogisticEvaluationJob:
             for f in Job.job_created_hooks:
@@ -36,25 +39,17 @@ class TypesLogisticEvaluationJob(EvaluationJob):
         self.mrr_job._prepare()
         """Construct dataloader"""
         # workaround for types dataset
-        types_path = self.config.get('user.types_path')
-        y, pos_weights, valid_idx = load_types(types_path, self.dataset._num_entities, self.eval_split)
-        self.y = y
-        self.valid_idx = valid_idx
-        self.num_examples = len(valid_idx)
+        self.valid_idx = self.model.type_ids['valid']
+        self.num_examples = len(self.valid_idx)
+        self.y = self.model.types
 
         # overwrite loss function and add linear function for logistic
-        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weights)
-        self.s_linear = torch.nn.Linear(in_features=self.model.get_s_embedder().dim, out_features=y.size(1), bias=False)
-        torch.nn.init.constant_(self.s_linear.weight, math.sqrt(1 / self.model.get_s_embedder().dim))
-        if not self.model.get_s_embedder() is self.model.get_o_embedder():
-            self.o_linear = torch.nn.Linear(in_features=self.model.get_o_embedder().dim, out_features=y.size(1),
-                                            bias=False)
-            torch.nn.init.constant_(self.o_linear.weight, math.sqrt(1 / self.model.get_o_embedder().dim))
+        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight=self.model.types_loss_weights)
         # and data loader
         self.loader = torch.utils.data.DataLoader(
             range(self.num_examples),
             collate_fn=lambda batch: {
-                "types": self.y[valid_idx[batch], :],
+                "types": self.y[self.valid_idx[batch], :],
                 "idx": self.valid_idx[batch]
             },
             shuffle=True,
@@ -82,6 +77,7 @@ class TypesLogisticEvaluationJob(EvaluationJob):
         #lets go
         epoch_time = -time.time()
         avg_loss = 0
+        mean_f1 = 0
         for i, batch in enumerate(self.loader):
 
             self.current_trace["batch"] = dict(
@@ -96,26 +92,26 @@ class TypesLogisticEvaluationJob(EvaluationJob):
 
             types = batch["types"].to(self.device)
             valid_idx = batch["idx"].to(self.device)
-            self.s_linear.to(self.device)
+            linear = self.model.get_linear()
+            linear.to(self.device)
             self.loss.to(self.device)
+            self.threshold.to(self.device)
 
             X = self.model.get_s_embedder().embed(valid_idx)
-            scores = self.s_linear(X)
-            s_loss = self.loss(scores, types) / len(valid_idx)
-            avg_loss += s_loss.item()
-            if self.model.get_s_embedder() is self.model.get_o_embedder():
-                avg_loss += s_loss.item()
-                s_loss *= 2
-                o_loss = torch.tensor([0.00])
-            else:
-                self.o_linear.to(self.device)
-                X = self.model.get_o_embedder().embed(valid_idx)
-                scores = self.o_linear(X)
-                o_loss = self.loss(scores, types) / len(valid_idx)
-                avg_loss += o_loss.item()
+            scores = linear(X)
+            loss = self.loss(scores, types) / len(valid_idx)
+            avg_loss += loss.item()
+
+            y_proba = torch.sigmoid(scores)
+            y_proba = y_proba.cpu().numpy()
+            thresh = self.threshold.cpu().numpy()
+            y_hat = (y_proba > thresh).astype(np.int)
+            f1 = f1_score(types.cpu().numpy(), y_hat, average='weighted', zero_division=0)
+            mean_f1 += f1 / len(valid_idx)
             # update batch trace with the results
             self.current_trace["batch"].update(dict(
-                loss=s_loss.item()+o_loss.item(),
+                loss=loss.item(),
+                f1=f1,
             ))
 
             # run the post-batch hooks (may modify the trace)
@@ -133,19 +129,20 @@ class TypesLogisticEvaluationJob(EvaluationJob):
                     "\r"  # go back
                     + "{}  batch:{: "
                     + str(1 + int(math.ceil(math.log10(len(self.loader)))))
-                    + "d}/{}, avg loss: {:4.3f}"
+                    + "d}/{}, avg loss: {:4.3f}, avg_f1 = {:.3f}"
                     + "\033[K"  # clear to right
                 ).format(
                     self.config.log_prefix,
                     i,
                     len(self.loader) - 1,
                     avg_loss,
+                    f1,
                 ),
                 end="",
                 flush=True,
             )
 
-
+        mean_f1 = float(mean_f1 * self.num_examples)
         self.mrr_job.epoch = self.epoch
         self.mrr_job._evaluate()
 
@@ -156,8 +153,9 @@ class TypesLogisticEvaluationJob(EvaluationJob):
         self.current_trace["epoch"].update(
             dict(
                 epoch_time=epoch_time,
+                avg_loss=avg_loss,
+                avg_f1=mean_f1,
                 event="eval_completed",
-                avg_loss=avg_loss
             )
         )
         self.mrr_job.current_trace["epoch"] = None

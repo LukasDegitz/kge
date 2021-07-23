@@ -27,27 +27,17 @@ class TrainingJobTypesLogisitic(TrainingJob):
     def _prepare(self):
         """Construct dataloader"""
         super()._prepare()
-        # workaround for types dataset
-        types_path = self.config.get('user.types_path')
-        y, pos_weights, train_idx = load_types(types_path, self.dataset._num_entities, 'train')
-        self.y = y
-        self.train_idx = train_idx
-        self.num_examples = len(train_idx)
+        self.train_idx = self.model.type_ids['train']
+        self.num_examples = len(self.train_idx)
+        self.y = self.model.types
 
         # overwrite loss function and add linear function for logistic
-        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weights)
-
-        self.s_linear = torch.nn.Linear(in_features=self.model.get_s_embedder().dim, out_features=y.size(1), bias=False)
-        torch.nn.init.constant_(self.s_linear.weight, math.sqrt(1 / self.model.get_s_embedder().dim))
-        if not self.model.get_s_embedder() is self.model.get_o_embedder():
-            self.o_linear = torch.nn.Linear(in_features=self.model.get_o_embedder().dim, out_features=y.size(1),
-                                            bias=False)
-            torch.nn.init.constant_(self.o_linear.weight, math.sqrt(1 / self.model.get_o_embedder().dim))
+        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight=self.model.types_loss_weights)
         # adapt loader, only take indices of training types
         self.loader = torch.utils.data.DataLoader(
             range(self.num_examples),
             collate_fn=lambda batch: {
-                "types": self.y[train_idx[batch], :],
+                "types": self.y[self.train_idx[batch], :],
                 "idx": self.train_idx[batch]
             },
             shuffle=True,
@@ -75,33 +65,20 @@ class TrainingJobTypesLogisitic(TrainingJob):
         result.prepare_time = -time.time()
         types = batch["types"][subbatch_slice].to(self.device)
         train_idx = batch["idx"][subbatch_slice].to(self.device)
-        self.s_linear.to(self.device)
+        linear = self.model.get_linear()
+        linear.to(self.device)
         self.loss.to(self.device)
         result.prepare_time += time.time()
 
         # forward/backward pass (sp)
         result.forward_time = -time.time()
         X = self.model.get_s_embedder().embed(train_idx)
-        scores = self.s_linear(X)
-        s_loss = self._loss_weight * (self.loss(scores, types) / batch_size)
-        result.avg_loss += s_loss.item()
-
-        # take loss twice if same embedder for s and o
-        if self.model.get_s_embedder() is self.model.get_o_embedder():
-            result.avg_loss += s_loss.item()
-            s_loss *= 2
-            o_loss = torch.tensor([0.00])
-        else:
-            self.o_linear.to(self.device)
-            X = self.model.get_o_embedder().embed(train_idx)
-            scores = self.o_linear(X)
-            o_loss = self._loss_weight * (self.loss(scores, types) / batch_size)
-            result.avg_loss += o_loss.item()
+        scores = linear(X)
+        loss = self._loss_weight * (self.loss(scores, types) / batch_size)
+        result.avg_loss += loss.item()
 
         result.forward_time += time.time()
         result.backward_time = -time.time()
         if not self.is_forward_only:
-            s_loss.backward()
-            if not self.model.get_s_embedder() is self.model.get_o_embedder():
-                o_loss.backward()
+            loss.backward()
         result.backward_time += time.time()

@@ -1,0 +1,10 @@
+import: [complex]
+
+types_logistic_model:
+  class_name: TypesLogisticModel
+  types_path: data/types/
+  lambda: 0.2
+  p: 2
+  embedding_model:
+    type: complex
+    +++: +++
