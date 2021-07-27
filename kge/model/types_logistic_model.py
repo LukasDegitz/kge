@@ -53,6 +53,9 @@ class TypesLogisticModel(KgeModel):
     def penalty(self, **kwargs):
         penalties = self._embedding_model.penalty(**kwargs)
         if "batch" in kwargs and "types" in kwargs["batch"]:
+            print()
+            weights, bias = self.linear.parameters()
+            print(weights.view(-1).size(),bias.view(-1).size())
             params = torch.cat([x.view(-1) for x in self.linear.parameters()])
             lamb = self.config.get("types_logistic_model.lambda")
             p = self.config.get("types_logistic_model.p")
@@ -90,6 +93,23 @@ class TypesLogisticModel(KgeModel):
 
     def score_sp_po(self, s, p, o, entity_subset=None):
         return self._embedding_model.score_sp_po(s, p, o, entity_subset)
+
+    def predict(self, thresh, idx=[], split='train'):
+        y_proba = self.predict_proba(idx=idx, split=split)
+        y_proba = y_proba.cpu().numpy()
+        thresh = thresh.cpu().numpy()
+        y_hat = (y_proba > thresh).astype(np.int)
+        return y_hat
+
+    def predict_proba(self, idx=[], split='train'):
+        return torch.sigmoid(self.predict_scores(idx=idx, split=split))
+
+    def predict_scores(self, idx=[], split='train'):
+        if idx:
+            y_hat = self.linear(self._embedding_model.get_s_embedder().embed(self.type_ids[idx]))
+        else:
+            y_hat = self.linear(self._embedding_model.get_s_embedder().embed(self.type_ids[split]))
+        return y_hat
 
     def load_types(self, types_dataset_path, num_entities):
 

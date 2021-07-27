@@ -66,7 +66,6 @@ class TrainingJobTypesLogisitic(TrainingJob):
         types = batch["types"][subbatch_slice].to(self.device)
         train_idx = batch["idx"][subbatch_slice].to(self.device)
         linear = self.model.get_linear()
-        linear.to(self.device)
         self.loss.to(self.device)
         result.prepare_time += time.time()
 

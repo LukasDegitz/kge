@@ -11,14 +11,14 @@ from typing import Any, Dict
 from sklearn.metrics import f1_score
 
 
-class TypesLogisticEvaluationJob(EvaluationJob):
-    """ Evaluating by using the training loss """
+class LCNLogisticEvaluationJob(EvaluationJob):
+    """ Evaluating by using hierarchical type prediction model by average f1"""
 
     def __init__(self, config: Config, dataset: Dataset, parent_job, model):
         super().__init__(config, dataset, parent_job, model)
 
-        config.log("Initializing types logisitic validation job...")
-        self.type_str = "TypesLogistic"
+        config.log("Initializing hierarchical validation job...")
+        self.type_str = "LCNLogistic"
 
         # add MRR eval job
         entity_ranking_eval_config = self.config.clone()
@@ -30,7 +30,7 @@ class TypesLogisticEvaluationJob(EvaluationJob):
                                             model=self.model)
         self.threshold = torch.Tensor([0.5])
 
-        if self.__class__ == TypesLogisticEvaluationJob:
+        if self.__class__ == LCNLogisticEvaluationJob:
             for f in Job.job_created_hooks:
                 f(self)
 
@@ -43,8 +43,7 @@ class TypesLogisticEvaluationJob(EvaluationJob):
         self.num_examples = len(self.valid_idx)
         self.y = self.model.types
 
-        # overwrite loss function and add linear function for logistic
-        self.loss = torch.nn.BCEWithLogitsLoss(pos_weight=self.model.types_loss_weights)
+
         # and data loader
         self.loader = torch.utils.data.DataLoader(
             range(self.num_examples),
@@ -76,7 +75,6 @@ class TypesLogisticEvaluationJob(EvaluationJob):
 
         #lets go
         epoch_time = -time.time()
-        avg_loss = 0
         mean_f1 = 0
         for i, batch in enumerate(self.loader):
 
@@ -90,27 +88,15 @@ class TypesLogisticEvaluationJob(EvaluationJob):
                 batches=len(self.loader),
             )
 
-            types = batch["types"].to(self.device)
+            y_valid = batch["types"].to(self.device)
             valid_idx = batch["idx"].to(self.device)
-            linear = self.model.get_linear()
-            linear.to(self.device)
-            self.loss.to(self.device)
-            self.threshold.to(self.device)
 
-            X = self.model.get_s_embedder().embed(valid_idx)
-            scores = linear(X)
-            loss = self.loss(scores, types) / len(valid_idx)
-            avg_loss += loss.item()
+            y_hat = self.model.predict_all(idx=valid_idx, thresh=self.threshold, device=self.device)
 
-            y_proba = torch.sigmoid(scores)
-            y_proba = y_proba.cpu().numpy()
-            thresh = self.threshold.cpu().numpy()
-            y_hat = (y_proba > thresh).astype(np.int)
-            f1 = f1_score(types.cpu().numpy(), y_hat, average='weighted', zero_division=0)
+            f1 = f1_score(y_valid.cpu().numpy(), y_hat.cpu().numpy(), average='weighted', zero_division=0)
             mean_f1 += f1 / len(self.loader)
             # update batch trace with the results
             self.current_trace["batch"].update(dict(
-                loss=loss.item(),
                 f1=f1,
             ))
 
@@ -129,13 +115,12 @@ class TypesLogisticEvaluationJob(EvaluationJob):
                     "\r"  # go back
                     + "{}  batch:{: "
                     + str(1 + int(math.ceil(math.log10(len(self.loader)))))
-                    + "d}/{}, avg loss: {:4.3f}, avg_f1 = {:.3f}"
+                    + "d}/{}, avg_f1 = {:.5f}"
                     + "\033[K"  # clear to right
                 ).format(
                     self.config.log_prefix,
                     i,
                     len(self.loader) - 1,
-                    avg_loss,
                     f1,
                 ),
                 end="",
@@ -153,7 +138,6 @@ class TypesLogisticEvaluationJob(EvaluationJob):
         self.current_trace["epoch"].update(
             dict(
                 epoch_time=epoch_time,
-                avg_loss=avg_loss,
                 avg_f1=mean_f1,
                 event="eval_completed",
             )

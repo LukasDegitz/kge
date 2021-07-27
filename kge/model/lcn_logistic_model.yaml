@@ -1,0 +1,12 @@
+import: [complex]
+
+lcn_logistic_model:
+  class_name: LCNLogisticModel
+  types_path: data/types/
+  local_lambda: 0.2
+  global_lambda: 0.5
+  beta: 0.5
+  p: 2
+  embedding_model:
+    type: complex
+    +++: +++

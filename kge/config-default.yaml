@@ -417,6 +417,9 @@ compound:
 TypesLogistic:
   class_name: TrainingJobTypesLogisitic
 
+LCNLogistic:
+  class_name: TrainingJobLCNLogisitic
+
 ## VALIDATION AND EVALUATION ###################################################
 
 # Options used for all evaluation jobs (job.type=="eval"). Also used during
@@ -549,6 +552,9 @@ training_loss:
 
 types_logistic:
   class_name: TypesLogisticEvaluationJob
+
+lcn_logistic:
+  class_name: LCNLogisticEvaluationJob
 ## EVALUATION ##################################################################
 
 
