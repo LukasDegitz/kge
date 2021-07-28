@@ -17,6 +17,8 @@ from kge.model.transh import TransH
 from kge.model.rotate import RotatE
 from kge.model.cp import CP
 from kge.model.simple import SimplE
+from kge.model.types_logistic_model import TypesLogisticModel
+from kge.model.lcn_logistic_model import LCNLogisticModel
 
 # meta models
 from kge.model.reciprocal_relations_model import ReciprocalRelationsModel

@@ -109,7 +109,8 @@ class TrainingJobCompound(TrainingJob):
             # get batch from relevant base trainer
             # already goes through collate function
             base_batch = next(self._base_trainer_iterators[trainer_id])
-            if self._base_trainers[trainer_id].type_str == "TypesLogistic":
+            if self._base_trainers[trainer_id].type_str == "TypesLogistic" or \
+                    self._base_trainers[trainer_id].type_str == "LCNLogistic" :
                 return {"types": base_batch["types"],
                         "idx": base_batch["idx"],
                         "processed_batch": (trainer_id, base_batch)}
