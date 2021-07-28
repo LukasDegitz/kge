@@ -58,7 +58,7 @@ class LCNLogisticModel(KgeModel):
 
         # materialize local training mask to avoid repetitive computation
         # lags y_train by one parent level for local training, repects multiple parents
-        self.train_mask = self.__build_mask(y=y[idx['train']])
+        self.train_mask = self.build_mask(y=y[idx['train']])
 
         # local predictors trained locally
         self.local = torch.nn.Linear(in_features=self._embedding_model.get_s_embedder().dim,
@@ -167,7 +167,7 @@ class LCNLogisticModel(KgeModel):
         y_hat_local = torch.where(local_conf > thresh, 1, 0)
 
         # mask confidences where parent was not predicted
-        local_mask = self.__build_mask(y_hat_local, mode='valid', device=device)
+        local_mask = self.build_mask(y_hat_local, mode='valid', device=device)
         local_conf = local_conf * local_mask
         global_conf = torch.sigmoid(self.glob(torch.cat((X, local_conf), dim=1)))
 
@@ -175,14 +175,14 @@ class LCNLogisticModel(KgeModel):
         y_hat = torch.where(model_conf > thresh, 1, 0)
 
         # mask inconsistent predictions - should be penalized in loss
-        y_hat_mask = self.__build_mask(y_hat, mode='valid', device=device)
+        y_hat_mask = self.build_mask(y_hat, mode='valid', device=device)
         return y_hat*y_hat_mask
 
     # function to zero all scores, that dont have the relative parent type assigned
     # used for local predictors
     #   corresponds to the siblings negative sampling strategy
     #   or prediction for child types, where a parent type was assigned
-    def __build_mask(self, y, mode='train', device=None):
+    def build_mask(self, y, mode='train', device=None):
         if mode == 'train':
             # build tensor with respect to total size
             y_idx = self.type_ids['train']

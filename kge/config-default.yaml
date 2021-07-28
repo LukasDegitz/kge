@@ -419,6 +419,8 @@ TypesLogistic:
 
 LCNLogistic:
   class_name: TrainingJobLCNLogisitic
+  sample_from_pred_warmup: 200
+  sample_from_pred_every: 0
 
 ## VALIDATION AND EVALUATION ###################################################
 

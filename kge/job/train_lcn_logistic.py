@@ -19,7 +19,13 @@ class TrainingJobLCNLogisitic(TrainingJob):
         )
         config.log("Initializing LCN logisitic training job...")
         self.type_str = "LCNLogistic"
-
+        sample_from_pred = config.get('LCNLogistic.sample_from_pred_every')
+        self.sample_from_pred = False
+        if sample_from_pred > 0:
+            self.sample_from_pred = True
+            self.sample_from_pred_every = sample_from_pred
+            self.sample_from_pred_warmup = config.get('LCNLogistic.sample_from_pred_warmup')
+            self.cnt = 0
         if self.__class__ == TrainingJobLCNLogisitic:
             for f in Job.job_created_hooks:
                 f(self)
@@ -82,13 +88,20 @@ class TrainingJobLCNLogisitic(TrainingJob):
         # forward pass
         result.forward_time = -time.time()
         X_train = self.model.get_s_embedder().embed(train_idx)
-        local_scores = local(X_train)
-        local_scores = torch.sigmoid(local_scores) * mask
-        global_scores = glob(torch.cat((X_train, local_scores), dim=1))
+        local_conf = torch.sigmoid(local(X_train))
+        if self.sample_from_pred:
+            if self.cnt > self.sample_from_pred_warmup and self.cnt % self.sample_from_pred_every == 0:
+                thresh = torch.Tensor([0.5]).to(self.device)
+                local_pred = torch.where(local_conf > thresh, 1, 0)
+                mask = self.model.build_mask(local_pred, mode='valid', device=self.device)
+            self.cnt += 1
+
+        local_conf = local_conf * mask
+        global_scores = glob(torch.cat((X_train, local_conf), dim=1))
 
         # losses
         local_samples = (torch.sum(mask, dim=0) + 1) # plus 1 to avoid division by zero, loss is zero anyway
-        local_loss = (torch.sum(self.local_loss(local_scores, y_train), dim=0) / local_samples).mean()
+        local_loss = (torch.sum(self.local_loss(local_conf, y_train), dim=0) / local_samples).mean()
         global_loss = self.global_loss(global_scores, y_train)
         loss = self._loss_weight/batch_size * (local_loss + global_loss)
 
