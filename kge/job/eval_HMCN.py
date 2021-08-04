@@ -92,8 +92,8 @@ class HMCNEvaluationJob(EvaluationJob):
             valid_idx = batch["idx"].to(self.device)
             thresh = self.threshold.to(self.device)
 
-            (_, _, logits) = self.model.predict_all(idx=valid_idx, device=self.device)
-            y_hat = torch.where(torch.sigmoid(logits) > thresh, 1, 0)
+            (_, _, probits) = self.model.predict_all(idx=valid_idx, device=self.device)
+            y_hat = torch.where(probits > thresh, 1, 0)
 
             # mask inconsistent predictions -> penalized if HMCN.lamb > 0
             y_hat_mask = self.model.build_mask(y_hat, type='binary', device=self.device)

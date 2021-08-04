@@ -66,7 +66,6 @@ class TrainingJobHCMN(TrainingJob):
         result: TrainingJob._ProcessBatchResult,
     ):
         batch_size = result.size
-
         # prepare
         result.prepare_time = -time.time()
         train_idx = batch["idx"][subbatch_slice]
@@ -78,17 +77,15 @@ class TrainingJobHCMN(TrainingJob):
 
         # forward pass
         result.forward_time = -time.time()
-        (global_logits, local_logits, logits) = self.model.predict_all(train_idx, self.device)
+        (global_logits, local_logits, probits) = self.model.predict_all(train_idx, self.device)
         loss = self.loss(global_logits, y_train)
         loss += self.loss(local_logits, y_train)
         # penelize if child conf is bigger than parent conf, use confidence threshold 0.5
         if lamb > 0.00:
-            y_hat = torch.sigmoid(logits)
             #lags parent prob to child
-            y_parent = self.model.build_mask(y=y_hat, type='prob', device=self.device)
+            parent_probits = self.model.build_mask(y=probits, type='prob', device=self.device)
             max_pos = torch.nn.ReLU()
-
-            violation_penalty = lamb * torch.sum(torch.pow(max_pos(y_hat-y_parent), 2))
+            violation_penalty = lamb * torch.sum(torch.pow(max_pos(probits-parent_probits), 2))
             loss += violation_penalty.item()
 
         loss = self._loss_weight * loss / batch_size
