@@ -1,0 +1,11 @@
+import: [complex]
+
+hmcn_model:
+  class_name: hmcn_model
+  types_path: data/types/
+  lambda: 0.1
+  beta: 0.5
+  hiddenlayer_dropout: 0.6
+  embedding_model:
+    type: complex
+    +++: +++

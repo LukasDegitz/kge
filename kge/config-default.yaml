@@ -422,6 +422,9 @@ LCNLogistic:
   sample_from_pred_warmup: 200
   sample_from_pred_every: 0
 
+hmcn_training_job:
+  class_name: TrainingJobHCMN
+
 ## VALIDATION AND EVALUATION ###################################################
 
 # Options used for all evaluation jobs (job.type=="eval"). Also used during
@@ -557,6 +560,9 @@ types_logistic:
 
 lcn_logistic:
   class_name: LCNLogisticEvaluationJob
+
+hmcn_eval_job:
+  class_name: HMCNEvaluationJob
 ## EVALUATION ##################################################################
 
 

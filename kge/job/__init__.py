@@ -19,3 +19,5 @@ from kge.job.train_types_logistic import TrainingJobTypesLogisitic
 from kge.job.eval_types_logistic import TypesLogisticEvaluationJob
 from kge.job.train_lcn_logistic import TrainingJobLCNLogisitic
 from kge.job.eval_lcn_logistic import LCNLogisticEvaluationJob
+from kge.job.train_HMCN import TrainingJobHCMN
+from kge.job.eval_HMCN import HMCNEvaluationJob
