@@ -154,7 +154,8 @@ class hmcn_model(KgeModel):
 
         global_layer_output = self.linear(global_layer_activation)
         local_layer_output = torch.cat(local_layer_outputs, 1)
-        return global_layer_output, local_layer_output, self.beta * global_layer_output + self.beta * local_layer_output
+        probits = self.beta * torch.sigmoid(local_layer_output) + (1 - self.beta) * torch.sigmoid(global_layer_output)
+        return global_layer_output, local_layer_output, probits
 
     # function to zero all scores, that dont have the relative parent type assigned
     # used for local predictors
@@ -183,7 +184,7 @@ class hmcn_model(KgeModel):
                         # if other parent not predictied, overwrite decision
                         y_parent[child_tuple] = torch.logical_or(y_parent[child_tuple], y[:, tuple_id]).int()
                     else:
-                        # if not binary use mean of parent predictions
+                        # if not binary use max of parent predictions
                         y_parent[child_tuple] = torch.max(y_parent[child_tuple], y[:, tuple_id]).float()
 
         return torch.stack(mask).transpose(0, 1).float()
