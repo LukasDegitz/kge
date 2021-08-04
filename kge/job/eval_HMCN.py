@@ -99,7 +99,7 @@ class HMCNEvaluationJob(EvaluationJob):
             y_hat_mask = self.model.build_mask(y_hat, type='binary', device=self.device)
             y_hat = y_hat*y_hat_mask
 
-            f1 = f1_score(y_valid.cpu().numpy(), y_hat.cpu().numpy(), average='weighted', zero_division=0)
+            f1 = f1_score(y_valid.cpu().numpy(), y_hat.cpu().numpy(), average='micro', zero_division=0)
             mean_f1 += f1 / len(self.loader)
             # update batch trace with the results
             self.current_trace["batch"].update(dict(
