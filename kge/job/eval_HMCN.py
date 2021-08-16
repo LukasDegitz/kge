@@ -5,7 +5,6 @@ import numpy as np
 
 from kge import Config, Dataset
 from kge.job import Job, EvaluationJob
-from kge.job.util import load_types
 
 from typing import Any, Dict
 from sklearn.metrics import f1_score
@@ -18,7 +17,6 @@ class HMCNEvaluationJob(EvaluationJob):
         super().__init__(config, dataset, parent_job, model)
 
         config.log("Initializing HMCN validation job...")
-        self.type_str = "HMCNLogistic"
 
         # add MRR eval job
         entity_ranking_eval_config = self.config.clone()
@@ -28,6 +26,9 @@ class HMCNEvaluationJob(EvaluationJob):
                                             dataset=self.dataset,
                                             parent_job=self,
                                             model=self.model)
+
+        # Set static confidence threshold
+        # TODO: implement one threshold per class and corresponding optimization e.g. Pellegrini and Masquelier (2021)
         self.threshold = torch.Tensor([0.5])
 
         if self.__class__ == HMCNEvaluationJob:

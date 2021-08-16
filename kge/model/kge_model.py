@@ -634,7 +634,7 @@ class KgeModel(KgeBase):
                 )
             return penalty_result
         elif "batch" in kwargs and "types" in kwargs["batch"]:
-            # essentially equal to the above, except for
+            # Add subject embedding penalty to entity embeddings after backward pass of HMCN model
             entity_indexes = kwargs["batch"]["idx"].to(self.config.get("job.device"))
             penalty_result = super().penalty(**kwargs)
             penalty_result += self.get_s_embedder().penalty(

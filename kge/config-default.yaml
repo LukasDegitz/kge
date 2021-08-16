@@ -414,14 +414,6 @@ compound:
   # whether to normalize the base trainer weights or not
   normalize_weights: False
 
-TypesLogistic:
-  class_name: TrainingJobTypesLogisitic
-
-LCNLogistic:
-  class_name: TrainingJobLCNLogisitic
-  sample_from_pred_warmup: 200
-  sample_from_pred_every: 0
-
 hmcn_training_job:
   class_name: TrainingJobHCMN
 
@@ -555,12 +547,6 @@ entity_ranking:
 training_loss:
   class_name: TrainingLossEvaluationJob
 
-types_logistic:
-  class_name: TypesLogisticEvaluationJob
-
-lcn_logistic:
-  class_name: LCNLogisticEvaluationJob
-
 hmcn_eval_job:
   class_name: HMCNEvaluationJob
 ## EVALUATION ##################################################################
@@ -646,5 +632,4 @@ ax_search:
 # These parameters are not used by the kge framework itself. It can be used to
 # add additional configuration options or information to this config.
 user:
-  types_path: data/
   +++: +++
