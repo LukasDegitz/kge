@@ -570,9 +570,3 @@ NOT RECOMMENDED: You can update the timestamp of all cached files using:
         """
         map_ = self.load_map(key, as_list=True)
         return Dataset._map_indexes(indexes, map_)
-
-
-class TypesDataset():
-
-    def __init__(self):
-        self.__class__ = Dataset

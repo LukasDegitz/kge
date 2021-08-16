@@ -1,0 +1,48 @@
+job.type: train
+dataset.name: toy
+model: hmcn_model
+hmcn_model:
+  types_path: ../data/toy/types
+  embedding_model:
+    type: complex
+import:
+- hmcn_model
+- complex
+lookup_embedder:
+  dim: 100
+  regularize_weight: 0.8e-7
+  initialize: normal_
+  initialize_args:
+    normal_:
+      mean: 0.0
+      std: 0.1
+train:
+  auto_correct: true
+  batch_size: 128
+  loss: bce
+  loss_arg: 1.0
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_args:
+    factor: 0.95
+    mode: max
+    patience: 7
+    threshold: 0.0001
+  max_epochs: 400
+  optimizer:
+    default:
+      type: Adam
+      args:
+        lr: 0.002
+  type: compound
+compound:
+  trainers:
+    hmcn_training_job:
+      type: hmcn_training_job
+      loss_weight: 100
+    KvsAll:
+      type: KvsAll
+      loss_weight: 1
+valid:
+  metric: avg_f1
+eval:
+  type: hmcn_eval_job

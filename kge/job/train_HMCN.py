@@ -5,14 +5,13 @@ import math
 
 from kge.job import Job
 from kge.job.train import TrainingJob, _generate_worker_init_fn
-from kge.job.util import load_types
 
 
 class TrainingJobHCMN(TrainingJob):
     """
         Implements hierarchical Multi-Label classification Network training as defined in Wehrmann et al. (2018)
         Codes are adapted from:
-        https://github.com/Tencent/NeuralNLP-NeuralClassifier/blob/b4fa04ffb70cb4f3f2effdb07d455f5e3fc393ea/model/loss.py
+        https://github.com/Tencent/NeuralNLP-NeuralClassifier/blob/master/model/loss.py
 
     """
     def __init__(
@@ -80,20 +79,20 @@ class TrainingJobHCMN(TrainingJob):
         (global_logits, local_logits, probits) = self.model.predict_all(train_idx, self.device)
         loss = self.loss(global_logits, y_train)
         loss += self.loss(local_logits, y_train)
-        # penelize if child conf is bigger than parent conf, use confidence threshold 0.5
+        # penelize if child conf is bigger than parent conf
         if lamb > 0.00:
-            #lags parent prob to child
+            # lags parent prob to child
             parent_probits = self.model.build_mask(y=probits, type='prob', device=self.device)
+            # only consider viloations: max(child_probit - parent_probit, 0) -> ReLU
             max_pos = torch.nn.ReLU()
             violation_penalty = lamb * torch.sum(torch.pow(max_pos(probits-parent_probits), 2))
             loss += violation_penalty.item()
 
         loss = self._loss_weight * loss / batch_size
-        # losses
         result.avg_loss += loss.item()
         result.forward_time += time.time()
 
-        # backward step for each local linear model
+        # backward pass optimizing/penalizing local and global components seperately
         result.backward_time = -time.time()
         if not self.is_forward_only:
             loss.backward()
